@@ -7,4 +7,4 @@ public class KeaDhcpOptions
 	public KeaDhcpServerOptions? Dhcp6 { get; set; }
 }
 
-public record class KeaDhcpServerOptions(FileInfo Leases);
+public record class KeaDhcpServerOptions(string Leases);
