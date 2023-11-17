@@ -15,6 +15,7 @@ builder.Services.Configure<PowerDnsOptions>(builder.Configuration.GetRequiredSec
 builder.Services.AddHostedService<DhcpLeaseWatcher>();
 builder.Services.AddHostedService<PowerDnsBackend>();
 
+builder.Services.AddTypedFactory<IDhcpLeaseWatcherFactory>();
 builder.Services.AddTypedFactory<IPowerDnsFactory>();
 
 builder.Build().Run();
