@@ -1,6 +1,3 @@
-using System.Net.Sockets;
-
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -9,7 +6,7 @@ using pdns_dhcp.PowerDns;
 
 namespace pdns_dhcp.Services;
 
-public class PowerDnsBackend : IHostedService
+public class PowerDnsBackend : BackgroundService
 {
 	private readonly PowerDnsOptions _options;
 
@@ -18,12 +15,7 @@ public class PowerDnsBackend : IHostedService
 		_options = options.Value;
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken)
-	{
-		throw new NotImplementedException();
-	}
-
-	public Task StopAsync(CancellationToken cancellationToken)
+	protected override Task ExecuteAsync(CancellationToken stoppingToken)
 	{
 		throw new NotImplementedException();
 	}

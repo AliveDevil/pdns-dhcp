@@ -5,13 +5,13 @@ public record struct KeaDhcp4Lease(
 	string Address,
 	string HWAddr,
 	string? ClientId,
-	UInt32 ValidLifetime,
-	UInt64 Expire,
+	uint ValidLifetime,
+	ulong Expire,
 	string SubnetId,
 	byte FqdnFwd,
 	byte FqdnRev,
 	string Hostname,
-	UInt32 State,
+	uint State,
 	string UserContext,
-	UInt32 PoolId
+	uint PoolId
 );
