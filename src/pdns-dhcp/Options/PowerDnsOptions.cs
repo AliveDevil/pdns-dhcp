@@ -1,8 +1,8 @@
 namespace pdns_dhcp.Options;
 
-public class PowerDnsOptions
+public class PowerDnsOptions(PowerDnsListenerOptions listener)
 {
-	public PowerDnsListenerOptions Listener { get; set; }
+	public PowerDnsListenerOptions Listener { get; } = listener;
 }
 
 public class PowerDnsListenerOptions(string socket)
