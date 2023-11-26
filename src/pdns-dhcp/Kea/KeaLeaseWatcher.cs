@@ -92,9 +92,9 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 			{
 				await foreach (var @event in _eventChannel.Reader.ReadAllAsync(loopToken))
 				{
-					// Guard for Deleted-events and moved-away events,
+					// Guard for Deleted and renamed away events,
 					// both have to stop this reader immediately.
-					// Just wait for the file being created/moved to _leaseFile.
+					// Just wait for the file being created/renamed to _leaseFile.
 					// Described in [The LFC Process](https://kea.readthedocs.io/en/latest/arm/lfc.html#kea-lfc)
 					switch (@event)
 					{
