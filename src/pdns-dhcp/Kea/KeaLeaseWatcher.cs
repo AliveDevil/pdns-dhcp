@@ -1,3 +1,6 @@
+using System.Buffers;
+using System.IO.Pipelines;
+using System.Text;
 using System.Threading.Channels;
 
 using Microsoft.Extensions.Hosting;
@@ -10,7 +13,7 @@ namespace pdns_dhcp.Kea;
 
 public abstract class KeaDhcpLeaseWatcher : IHostedService
 {
-	private static readonly FileStreamOptions _leaseFileStreamOptions = new()
+	private static readonly FileStreamOptions LeaseFileStreamOptions = new()
 	{
 		Access = FileAccess.Read,
 		Mode = FileMode.Open,
@@ -132,16 +135,77 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 
 	private async Task FileReader(CancellationToken stoppingToken)
 	{
+		Pipe buffer = new();
+		var writer = buffer.Writer;
+		var textDecoder = Encoding.UTF8.GetDecoder();
+		SepReader? reader = null;
 		try
 		{
-			using var streamReader = new StreamReader(Options.Leases, _leaseFileStreamOptions);
-			using var reader = Sep.Reader().From(streamReader);
+			using var file = new FileStream(Options.Leases, LeaseFileStreamOptions);
 
+			bool awaitLineFeed = false;
+			int newLinesEncountered = 0;
 			while (!stoppingToken.IsCancellationRequested)
 			{
+				for (; newLinesEncountered > 0; newLinesEncountered--)
+				{
+					if (reader is null)
+					{
+						reader = Sep.Reader().From(buffer.Reader.AsStream());
+						continue;
+					}
+
+					if (!reader.MoveNext())
+					{
+						// TODO Error state.
+						continue;
+					}
+				}
+
+				var memory = writer.GetMemory();
+				int read = await file.ReadAsync(memory, stoppingToken);
+				if (read > 0)
+				{
+					CountNewLines(textDecoder, memory[..read], ref newLinesEncountered, ref awaitLineFeed);
+					writer.Advance(read);
+				}
+				else
+				{
+					// TODO Await.
+				}
 			}
 		}
 		catch { }
+		finally
+		{
+			writer.Complete();
+			reader?.Dispose();
+		}
+
+		static void CountNewLines(Decoder decoder, in Memory<byte> memory, ref int newLinesEncountered, ref bool awaitLineFeed)
+		{
+			Span<char> buffer = stackalloc char[128];
+			bool completed = false;
+			ReadOnlySequence<byte> sequence = new(memory);
+			var reader = new SequenceReader<byte>(sequence);
+			while (!reader.End)
+			{
+				decoder.Convert(reader.UnreadSpan, buffer, false, out var bytesUsed, out var charsUsed, out completed);
+				reader.Advance(bytesUsed);
+				foreach (ref readonly char c in buffer[..charsUsed])
+				{
+					if (awaitLineFeed || c == '\n')
+					{
+						newLinesEncountered++;
+						awaitLineFeed = false;
+					}
+					else if (c == '\r')
+					{
+						awaitLineFeed = true;
+					}
+				}
+			}
+		}
 	}
 
 	private void OnLeaseChanged(object sender, FileSystemEventArgs e)

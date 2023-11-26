@@ -15,6 +15,7 @@
 		<PackageReference Include="Sep" Version="0.3.0" />
 		<PackageReference Include="Stl.Generators" Version="6.7.21" />
 		<PackageReference Include="Stl.Interception" Version="6.7.21" />
+		<PackageReference Include="System.IO.Pipelines" Version="8.0.0" />
 	</ItemGroup>
 
 </Project>
