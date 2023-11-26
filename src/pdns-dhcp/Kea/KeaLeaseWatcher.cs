@@ -6,8 +6,6 @@ using nietras.SeparatedValues;
 
 using pdns_dhcp.Options;
 
-using Stl.Async;
-
 namespace pdns_dhcp.Kea;
 
 public abstract class KeaDhcpLeaseWatcher : IHostedService
@@ -19,6 +17,7 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 		Options = FileOptions.SequentialScan,
 		Share = (FileShare)7,
 	};
+
 	private readonly FileSystemWatcher _fsw;
 	private readonly string _leaseFile;
 	private Channel<FileSystemEventArgs>? _eventChannel;
@@ -135,7 +134,12 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 	{
 		try
 		{
-			using var fileStream = new FileStream(Options.Leases, _leaseFileStreamOptions);
+			using var streamReader = new StreamReader(Options.Leases, _leaseFileStreamOptions);
+			using var reader = Sep.Reader().From(streamReader);
+
+			while (!stoppingToken.IsCancellationRequested)
+			{
+			}
 		}
 		catch { }
 	}
