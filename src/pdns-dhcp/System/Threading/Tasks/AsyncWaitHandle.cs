@@ -28,7 +28,7 @@ public static class AsyncWaitHandle
 			{
 				return;
 			}
-			
+
 			_registeredWaitHandle.Unregister(default);
 			_cancellationTokenRegistration.Dispose();
 
@@ -44,12 +44,11 @@ public static class AsyncWaitHandle
 		private void Canceled(CancellationToken token)
 		{
 			_tcs.SetCanceled(token);
-			this.Dispose();
 		}
 
 		private Task Continuation(Task task)
 		{
-			this.Dispose();
+			Dispose();
 			return task;
 		}
 
