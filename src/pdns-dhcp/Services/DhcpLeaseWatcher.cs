@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
+using pdns_dhcp.Kea;
 using pdns_dhcp.Options;
 
 namespace pdns_dhcp.Services;

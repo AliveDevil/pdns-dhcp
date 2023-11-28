@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
+using pdns_dhcp.Kea;
 using pdns_dhcp.Options;
 using pdns_dhcp.PowerDns;
 using pdns_dhcp.Services;
@@ -17,5 +18,8 @@ builder.Services.AddHostedService<PowerDnsBackend>();
 
 builder.Services.AddTypedFactory<IDhcpLeaseWatcherFactory>();
 builder.Services.AddTypedFactory<IPowerDnsFactory>();
+
+builder.Services.AddTransient<KeaDhcp4LeaseHandler>();
+builder.Services.AddTransient<KeaDhcp6LeaseHandler>();
 
 builder.Build().Run();

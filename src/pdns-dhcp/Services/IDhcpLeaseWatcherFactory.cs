@@ -7,7 +7,7 @@ namespace pdns_dhcp.Services;
 
 public interface IDhcpLeaseWatcherFactory : IRequiresFullProxy
 {
-	KeaDhcp4LeaseWatcher KeaDhcp4Watcher(KeaDhcpServerOptions options);
+	KeaDhcpLeaseWatcher<KeaDhcp4LeaseHandler> KeaDhcp4Watcher(KeaDhcpServerOptions options);
 
-	KeaDhcp6LeaseWatcher KeaDhcp6Watcher(KeaDhcpServerOptions options);
+	KeaDhcpLeaseWatcher<KeaDhcp6LeaseHandler> KeaDhcp6Watcher(KeaDhcpServerOptions options);
 }

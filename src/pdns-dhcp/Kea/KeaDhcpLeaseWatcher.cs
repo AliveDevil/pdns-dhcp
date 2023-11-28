@@ -11,7 +11,8 @@ using pdns_dhcp.Options;
 
 namespace pdns_dhcp.Kea;
 
-public abstract class KeaDhcpLeaseWatcher : IHostedService
+public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
+	where T : IKeaDhcpLeaseHandler
 {
 	private static readonly FileStreamOptions LeaseFileStreamOptions = new()
 	{
@@ -23,17 +24,20 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 
 	private readonly Decoder _decoder;
 	private readonly FileSystemWatcher _fsw;
+	private readonly T _handler;
 	private readonly string _leaseFile;
 	private readonly Pipe _pipe;
 	private Channel<FileSystemEventArgs>? _eventChannel;
 	private Task? _executeTask;
 	private CancellationTokenSource? _stoppingCts;
 
-	protected KeaDhcpServerOptions Options { get; }
+	private KeaDhcpServerOptions Options { get; }
 
-	protected KeaDhcpLeaseWatcher(KeaDhcpServerOptions options)
+	public KeaDhcpLeaseWatcher(KeaDhcpServerOptions options, T handler)
 	{
 		Options = options;
+		_handler = handler;
+
 		var leases = options.Leases.AsSpan();
 		if (leases.IsWhiteSpace())
 		{
@@ -176,6 +180,7 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 				{
 					CountNewLines(_decoder, memory[..read], ref newLinesEncountered, ref awaitLineFeed);
 					writer.Advance(read);
+					await writer.FlushAsync(stoppingToken);
 				}
 				else
 				{
@@ -218,23 +223,22 @@ public abstract class KeaDhcpLeaseWatcher : IHostedService
 
 	private void OnLeaseChanged(object sender, FileSystemEventArgs e)
 	{
-		var writer = _eventChannel?.Writer;
-		if (writer?.TryWrite(e) != false)
+		if (_eventChannel?.Writer is not { } writer)
 		{
 			return;
 		}
 
-#pragma warning disable CA2012 // Task is awaited immediately.
-		if (writer.WriteAsync(e) is { IsCompleted: false } task)
-		{
-			try
-			{
-				task.GetAwaiter().GetResult();
-			}
-			catch { }
-		}
+#pragma warning disable CA2012
+		var task = writer.WriteAsync(e, CancellationToken.None);
 #pragma warning restore
+		if (task.IsCompleted)
+		{
+			return;
+		}
+
+		task.GetAwaiter().GetResult();
 	}
+
 
 	private void OnLeaseError(object sender, ErrorEventArgs e)
 	{
