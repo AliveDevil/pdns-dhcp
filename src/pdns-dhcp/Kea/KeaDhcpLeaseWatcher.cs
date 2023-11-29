@@ -163,7 +163,11 @@ public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
 				{
 					if (reader is null)
 					{
-						reader = Sep.Reader().From(_pipe.Reader.AsStream());
+						reader = Sep.New(',').Reader(o => o with
+						{
+							DisableColCountCheck = true,
+							Unescape = false
+						}).From(_pipe.Reader.AsStream());
 						continue;
 					}
 
@@ -172,6 +176,8 @@ public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
 						// TODO Error state.
 						return;
 					}
+
+					_handler.Handle(reader.Current);
 				}
 
 				var memory = writer.GetMemory();
