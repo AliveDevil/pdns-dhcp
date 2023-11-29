@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Globalization;
 
+using DotNext;
 using DotNext.Buffers;
 
 namespace pdns_dhcp.Kea;
@@ -9,10 +10,14 @@ public static class KeaDhcpLease
 {
 	private static ReadOnlySpan<char> EscapeTag => ['&', '#', 'x'];
 
+	// ref: https://github.com/isc-projects/kea/blob/Kea-2.5.3/src/lib/util/csv_file.cc#L479
 	public static string Unescape(in ReadOnlySpan<char> text)
 	{
-		int esc_pos = text.IndexOf(EscapeTag);
-		return esc_pos == -1 ? text.ToString() : SlowPath(esc_pos, text);
+		return text.IndexOf(EscapeTag) switch
+		{
+			-1 => text.ToString(),
+			int i => SlowPath(i, text)
+		};
 
 		static string SlowPath(int esc_pos, in ReadOnlySpan<char> text)
 		{
