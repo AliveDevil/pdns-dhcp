@@ -1,7 +1,6 @@
 using System.Buffers;
 using System.Globalization;
 
-using DotNext;
 using DotNext.Buffers;
 
 namespace pdns_dhcp.Kea;
