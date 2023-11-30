@@ -22,50 +22,62 @@ public record struct KeaDhcp4Lease(
 {
 	public static KeaDhcp4Lease Parse(in SepReader.Row row)
 	{
-		var address = IPAddress.Parse(row[0].Span);
-		PhysicalAddress hwaddr = PhysicalAddress.None;
-		if (row[1].Span is { IsEmpty: false } physical)
+		KeaDhcp4Lease result = new();
+		for (int i = 0; i < row.ColCount; i++)
 		{
-			hwaddr = PhysicalAddress.Parse(physical);
-		}
-		string? clientId = row[2].ToString();
-		uint validLifetime = uint.Parse(row[3].Span);
-		DateTimeOffset expire = DateTimeOffset.FromUnixTimeSeconds(unchecked((long)ulong.Parse(row[4].Span)));
-		uint subnetId = uint.Parse(row[5].Span);
-		bool fqdnFwd = sbyte.Parse(row[6].Span) != 0;
-		bool fqdnRev = sbyte.Parse(row[7].Span) != 0;
-		string hostname = KeaDhcpLease.Unescape(row[8].Span);
+			var span = row[i].Span;
+			switch (i)
+			{
+				case 0:
+					result.Address = IPAddress.Parse(span);
+					break;
 
-		uint state = 0;
-		if (row.ColCount > 9)
-		{
-			state = uint.Parse(row[9].Span);
+				case 1 when !span.IsWhiteSpace():
+					result.HWAddr = PhysicalAddress.Parse(span);
+					break;
+
+				case 2:
+					result.ClientId = span.ToString();
+					break;
+
+				case 3:
+					result.ValidLifetime = uint.Parse(span);
+					break;
+
+				case 4:
+					result.Expire = DateTimeOffset.FromUnixTimeSeconds(unchecked((long)ulong.Parse(span)));
+					break;
+
+				case 5:
+					result.SubnetId = uint.Parse(span);
+					break;
+
+				case 6:
+					result.FqdnFwd = byte.Parse(span) != 0;
+					break;
+
+				case 7:
+					result.FqdnRev = byte.Parse(span) != 0;
+					break;
+
+				case 8:
+					result.Hostname = KeaDhcpLease.Unescape(span);
+					break;
+
+				case 9:
+					result.State = uint.Parse(span);
+					break;
+
+				case 10:
+					result.UserContext = KeaDhcpLease.Unescape(span);
+					break;
+
+				case 11:
+					result.PoolId = uint.Parse(span);
+					break;
+			}
 		}
 
-		string? userContext = default;
-		if (row.ColCount > 10)
-		{
-			userContext = KeaDhcpLease.Unescape(row[10].Span);
-		}
-
-		uint poolId = 0;
-		if (row.ColCount > 11)
-		{
-			poolId = uint.Parse(row[11].Span);
-		}
-
-		return new(
-			address,
-			hwaddr,
-			clientId,
-			validLifetime,
-			expire,
-			subnetId,
-			fqdnFwd,
-			fqdnRev,
-			hostname,
-			state,
-			userContext,
-			poolId);
+		return result;
 	}
 }
