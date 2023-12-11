@@ -1,8 +1,14 @@
+using System.Text.Json;
+
+using Stl.Async;
+
 namespace pdns_dhcp.PowerDns;
 
 public class PowerDnsStreamClient : IDisposable
 {
 	private readonly Stream _stream;
+	private CancellationTokenSource _cts = new();
+	private Task _task;
 
 	public PowerDnsStreamClient(Stream stream)
 	{
@@ -11,17 +17,29 @@ public class PowerDnsStreamClient : IDisposable
 
 	~PowerDnsStreamClient()
 	{
-		Dispose(false);
+		Dispose();
 	}
 
 	public void Dispose()
 	{
-		Dispose(true);
+		using (_cts)
+		using (_stream)
+		{
+			_cts.Cancel();
+			_task.GetAwaiter().GetResult();
+		}
 		GC.SuppressFinalize(this);
 	}
 
-	private void Dispose(bool disposing)
+	public void Start(CancellationToken stoppingToken)
 	{
-		_stream.Dispose();
+		using var other = Interlocked.Exchange(ref _cts, CancellationTokenSource.CreateLinkedTokenSource(stoppingToken));
+		_task = Run(_cts.Token);
+		other.Cancel();
+	}
+
+	private Task Run(CancellationToken stoppingToken)
+	{
+		return Task.CompletedTask;
 	}
 }

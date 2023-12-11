@@ -1,3 +1,5 @@
+using System.Net.Sockets;
+
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 
@@ -8,15 +10,23 @@ namespace pdns_dhcp.Services;
 
 public class PowerDnsBackend : BackgroundService
 {
-	private readonly PowerDnsOptions _options;
+	private readonly IPowerDnsFactory _factory;
+	private readonly Socket _socket;
 
 	public PowerDnsBackend(IOptions<PowerDnsOptions> options, IPowerDnsFactory socketFactory)
 	{
-		_options = options.Value;
+		_factory = socketFactory;
+		_socket = new(SocketType.Stream, ProtocolType.Unknown);
+		_socket.Bind(new UnixDomainSocketEndPoint(options.Value.Listener.Socket));
 	}
 
-	protected override Task ExecuteAsync(CancellationToken stoppingToken)
+	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		return Task.CompletedTask;
+		_socket.Listen();
+		while (await _socket.AcceptAsync(stoppingToken) is { } client)
+		{
+			_factory.CreateClient(new NetworkStream(client, true))
+				.Start(stoppingToken);
+		}
 	}
 }
