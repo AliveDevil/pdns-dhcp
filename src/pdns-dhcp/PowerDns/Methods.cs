@@ -8,11 +8,16 @@ public interface IMethod
 	public abstract static string Method { get; }
 }
 
-public abstract class Method<TSelf> where TSelf : Method<TSelf>, IMethod
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "method")]
+[JsonDerivedType(typeof(InitializeMethod), "initialize")]
+[JsonDerivedType(typeof(LookupMethod), "lookup")]
+public abstract class Method
 {
 	[JsonExtensionData]
 	public Dictionary<string, JsonElement> ExtensionData { get; } = [];
 }
+
+public abstract class Method<TSelf> : Method where TSelf : Method<TSelf>, IMethod;
 
 public abstract class Method<TSelf, TParam>(TParam parameters) : Method<TSelf> where TSelf : Method<TSelf, TParam>, IMethod
 {

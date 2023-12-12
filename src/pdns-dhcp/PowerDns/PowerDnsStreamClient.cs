@@ -38,8 +38,11 @@ public class PowerDnsStreamClient : IDisposable
 		other.Cancel();
 	}
 
-	private Task Run(CancellationToken stoppingToken)
+	private async Task Run(CancellationToken stoppingToken)
 	{
-		return Task.CompletedTask;
+		while (!stoppingToken.IsCancellationRequested)
+		{
+			await JsonSerializer.DeserializeAsync<Method>(_stream, cancellationToken: stoppingToken);
+		}
 	}
 }
