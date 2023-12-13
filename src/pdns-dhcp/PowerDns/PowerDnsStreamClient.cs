@@ -1,7 +1,5 @@
 using System.Text.Json;
 
-using Stl.Async;
-
 namespace pdns_dhcp.PowerDns;
 
 public class PowerDnsStreamClient : IDisposable
@@ -17,32 +15,63 @@ public class PowerDnsStreamClient : IDisposable
 
 	~PowerDnsStreamClient()
 	{
-		Dispose();
+		DisposeCore();
 	}
 
 	public void Dispose()
 	{
-		using (_cts)
-		using (_stream)
+		_cts.Cancel();
+		if (Interlocked.Exchange(ref _task, null!) is { } task)
 		{
-			_cts.Cancel();
-			_task.GetAwaiter().GetResult();
+			task
+				.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing)
+				.GetAwaiter().GetResult();
 		}
+
+		DisposeCore();
+
 		GC.SuppressFinalize(this);
 	}
 
 	public void Start(CancellationToken stoppingToken)
 	{
-		using var other = Interlocked.Exchange(ref _cts, CancellationTokenSource.CreateLinkedTokenSource(stoppingToken));
-		_task = Run(_cts.Token);
-		other.Cancel();
+		var cts = CancellationTokenSource.CreateLinkedTokenSource(stoppingToken);
+		using var old = Interlocked.Exchange(ref _cts, cts);
+		old.Cancel();
+		_task = Run(cts.Token);
+	}
+
+	private void DisposeCore()
+	{
+		_cts.Dispose();
+		_stream.Dispose();
 	}
 
 	private async Task Run(CancellationToken stoppingToken)
 	{
-		while (!stoppingToken.IsCancellationRequested)
+		try
 		{
-			await JsonSerializer.DeserializeAsync<Method>(_stream, cancellationToken: stoppingToken);
+			while (!stoppingToken.IsCancellationRequested)
+			{
+				switch (await JsonSerializer.DeserializeAsync<Method>(_stream, cancellationToken: stoppingToken).ConfigureAwait(false))
+				{
+					case InitializeMethod init:
+						break;
+				
+					case LookupMethod lookup:
+						break;
+				
+					default:
+						break;
+				}
+			}
+		}
+		finally
+		{
+			if (Interlocked.Exchange(ref _task, null!) is not null)
+			{
+				Dispose();
+			}
 		}
 	}
 }

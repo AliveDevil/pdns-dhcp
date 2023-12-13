@@ -16,8 +16,17 @@ public class PowerDnsBackend : BackgroundService
 	public PowerDnsBackend(IOptions<PowerDnsOptions> options, IPowerDnsFactory socketFactory)
 	{
 		_factory = socketFactory;
-		_socket = new(SocketType.Stream, ProtocolType.Unknown);
-		_socket.Bind(new UnixDomainSocketEndPoint(options.Value.Listener.Socket));
+		_socket = new(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+		var path = PathEx.ExpandPath(options.Value.Listener.Socket);
+		FileInfo file = new(path);
+		file.Directory!.Create();
+		file.Delete();
+		_socket.Bind(new UnixDomainSocketEndPoint(path));
+	}
+
+	~PowerDnsBackend()
+	{
+		DisposeCore();
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -28,5 +37,17 @@ public class PowerDnsBackend : BackgroundService
 			_factory.CreateClient(new NetworkStream(client, true))
 				.Start(stoppingToken);
 		}
+	}
+
+	public override void Dispose()
+	{
+		base.Dispose();
+		DisposeCore();
+		GC.SuppressFinalize(this);
+	}
+
+	private void DisposeCore()
+	{
+		_socket.Dispose();
 	}
 }

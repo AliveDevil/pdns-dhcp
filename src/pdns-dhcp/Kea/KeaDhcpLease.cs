@@ -3,6 +3,8 @@ using System.Globalization;
 
 using DotNext.Buffers;
 
+using Microsoft.Toolkit.HighPerformance.Buffers;
+
 namespace pdns_dhcp.Kea;
 
 public static class KeaDhcpLease
@@ -21,7 +23,7 @@ public static class KeaDhcpLease
 		static string SlowPath(int esc_pos, in ReadOnlySpan<char> text)
 		{
 			SpanReader<char> reader = new(text);
-			ArrayBufferWriter<char> writer = new(text.Length);
+			using ArrayPoolBufferWriter<char> writer = new(text.Length);
 			while (reader.RemainingCount > 0)
 			{
 				writer.Write(reader.Read(esc_pos));

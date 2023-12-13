@@ -3,10 +3,7 @@ using System.Text.Json.Serialization;
 
 namespace pdns_dhcp.PowerDns;
 
-public interface IMethod
-{
-	public abstract static string Method { get; }
-}
+public interface IMethod;
 
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "method")]
 [JsonDerivedType(typeof(InitializeMethod), "initialize")]
@@ -24,12 +21,6 @@ public abstract class Method<TSelf, TParam>(TParam parameters) : Method<TSelf> w
 	public TParam Parameters => parameters;
 }
 
-public class InitializeMethod : Method<InitializeMethod>, IMethod
-{
-	public static string Method => "Initialize";
-}
+public class InitializeMethod : Method<InitializeMethod>, IMethod;
 
-public class LookupMethod : Method<LookupMethod>, IMethod
-{
-	public static string Method => "Lookup";
-}
+public class LookupMethod : Method<LookupMethod>, IMethod;

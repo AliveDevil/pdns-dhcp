@@ -35,7 +35,7 @@ public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
 
 	public KeaDhcpLeaseWatcher(KeaDhcpServerOptions options, T handler)
 	{
-		Options = options;
+		Options = options = options with { Leases = PathEx.ExpandPath(options.Leases) };
 		_handler = handler;
 
 		var leases = options.Leases.AsSpan();
