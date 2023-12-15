@@ -29,7 +29,7 @@ builder.Services.AddTypedFactory<IDhcpLeaseWatcherFactory>();
 builder.Services.AddTransient<KeaDhcp4LeaseHandler>();
 builder.Services.AddTransient<KeaDhcp6LeaseHandler>();
 
-builder.WebHost.UseSockets(options =>
+builder.Services.Configure<SocketTransportOptions>(options =>
 {
 	options.CreateBoundListenSocket = endpoint =>
 	{
@@ -55,7 +55,6 @@ builder.WebHost.UseSockets(options =>
 	};
 });
 
-builder.WebHost.UseKestrelCore();
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
 	if (context.Configuration.GetRequiredSection("PowerDns:Listener").Get<PowerDnsListenerOptions>() is { } pdnsOptions)
