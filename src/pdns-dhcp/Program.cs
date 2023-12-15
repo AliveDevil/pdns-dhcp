@@ -71,4 +71,6 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 	}
 });
 
-builder.Build().Run();
+var app = builder.Build();
+
+app.Run();
