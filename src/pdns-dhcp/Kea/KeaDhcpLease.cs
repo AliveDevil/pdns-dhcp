@@ -28,18 +28,26 @@ public static class KeaDhcpLease
 			{
 				writer.Write(reader.Read(esc_pos));
 				reader.Advance(EscapeTag.Length);
-				if (EscapeTag.Length <= reader.RemainingCount - 2)
+
+				bool converted = false;
+				char escapedChar = default;
+				if (reader.RemainingCount >= 2)
 				{
-					var digits = reader.Read(2);
-					if (byte.TryParse(digits, NumberStyles.AllowHexSpecifier, null, out var escaped_char))
+					if (byte.TryParse(reader.RemainingSpan[..2], NumberStyles.AllowHexSpecifier, null, out var b))
 					{
-						writer.Write((char)escaped_char);
+						converted = true;
+						escapedChar = (char)b;
+						reader.Advance(2);
 					}
-					else
-					{
-						writer.Write(EscapeTag);
-						writer.Write(digits);
-					}
+				}
+
+				if (converted)
+				{
+					writer.Write(escapedChar);
+				}
+				else
+				{
+					writer.Write(EscapeTag);
 				}
 
 				esc_pos = reader.RemainingSpan.IndexOf(EscapeTag);
