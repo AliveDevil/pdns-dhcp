@@ -15,6 +15,7 @@ public class PowerDnsHandler : ConnectionHandler
 		JsonReaderState state = default;
 		using ArrayPoolBufferWriter<byte> json = new();
 		using ArrayPoolBufferWriter<byte> buffer = new();
+		using var writer = connection.Transport.Output.AsStream();
 		while (!connection.ConnectionClosed.IsCancellationRequested)
 		{
 			var read = await input.ReadAsync(connection.ConnectionClosed).ConfigureAwait(false);
@@ -28,9 +29,19 @@ public class PowerDnsHandler : ConnectionHandler
 				buffer.Write(memory.Span);
 				if (ConsumeJson(buffer, json, ref state))
 				{
-					var method = JsonSerializer.Deserialize<Method>(json.WrittenSpan);
+					var method = JsonSerializer.Deserialize(json.WrittenSpan, MethodContext.Default.Method)!;
 					json.Clear();
 					state = default;
+
+					Reply reply = BoolReply.False;
+					try
+					{
+						reply = await Handle(method, connection.ConnectionClosed).ConfigureAwait(false);
+					}
+					catch (Exception e) { }
+
+					await JsonSerializer.SerializeAsync(writer, reply, ReplyContext.Default.Reply, connection.ConnectionClosed)
+						.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 				}
 			}
 
@@ -74,5 +85,26 @@ public class PowerDnsHandler : ConnectionHandler
 
 			return final;
 		}
+	}
+
+	private ValueTask<Reply> Handle(Method method, CancellationToken cancellationToken = default)
+	{
+		return method switch
+		{
+			InitializeMethod init => HandleInitializeMethod(init),
+			LookupMethod lookup => HandleLookupMethod(lookup),
+
+			_ => ValueTask.FromResult<Reply>(new BoolReply(false))
+		};
+	}
+
+	private ValueTask<Reply> HandleInitializeMethod(InitializeMethod method)
+	{
+		return ValueTask.FromResult(BoolReply.True);
+	}
+
+	private ValueTask<Reply> HandleLookupMethod(LookupMethod method)
+	{
+		return ValueTask.FromResult(BoolReply.False);
 	}
 }
