@@ -5,10 +5,19 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.Toolkit.HighPerformance;
 using Microsoft.Toolkit.HighPerformance.Buffers;
 
+using pdns_dhcp.Dns;
+
 namespace pdns_dhcp.PowerDns;
 
 public class PowerDnsHandler : ConnectionHandler
 {
+	private readonly DnsRepository _repository;
+	
+	public PowerDnsHandler(DnsRepository repository)
+	{
+		_repository = repository;
+	}
+
 	public override async Task OnConnectedAsync(ConnectionContext connection)
 	{
 		var input = connection.Transport.Input;
