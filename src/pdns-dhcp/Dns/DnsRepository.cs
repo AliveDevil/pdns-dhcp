@@ -40,10 +40,10 @@ public class DnsRepository
 			cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
 	}
 
-	public async ValueTask Record(DhcpLeaseChange leaseChange)
+	public async ValueTask Record(DhcpLeaseChange leaseChange, CancellationToken cancellationToken = default)
 	{
 		// just lock that thing.
-		using (await _recordLock.AcquireLockAsync(CancellationToken.None).ConfigureAwait(false))
+		using (await _recordLock.AcquireLockAsync(cancellationToken).ConfigureAwait(false))
 		{
 			RecordContinuation(leaseChange);
 		}

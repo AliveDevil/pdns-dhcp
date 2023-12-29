@@ -9,6 +9,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 using pdns_dhcp.Connections;
+using pdns_dhcp.Dhcp;
+using pdns_dhcp.Dns;
 using pdns_dhcp.Kea;
 using pdns_dhcp.Options;
 using pdns_dhcp.PowerDns;
@@ -21,13 +23,14 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<DhcpOptions>(builder.Configuration.GetRequiredSection("Dhcp"));
 builder.Services.Configure<PowerDnsOptions>(builder.Configuration.GetRequiredSection("PowerDns"));
 
-builder.Services.AddHostedService<DhcpLeaseWatcher>();
-builder.Services.AddHostedService<PowerDnsBackend>();
+builder.Services.AddHostedService<DhcpWatcher>();
+builder.Services.AddHostedService<DnsQueueWorker>();
 
-builder.Services.AddTypedFactory<IDhcpLeaseWatcherFactory>();
+builder.Services.AddSingleton<DhcpLeaseQueue>();
+builder.Services.AddSingleton<DnsRepository>();
 
-builder.Services.AddTransient<KeaDhcp4LeaseHandler>();
-builder.Services.AddTransient<KeaDhcp6LeaseHandler>();
+builder.Services.AddTypedFactory<IDhcpWatcherFactory>();
+builder.Services.AddTypedFactory<IKeaFactory>();
 
 builder.Services.Configure<SocketTransportOptions>(options =>
 {

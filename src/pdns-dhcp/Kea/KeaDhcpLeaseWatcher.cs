@@ -7,36 +7,38 @@ using Microsoft.Extensions.Hosting;
 
 using nietras.SeparatedValues;
 
+using pdns_dhcp.Dhcp;
 using pdns_dhcp.Options;
 
 namespace pdns_dhcp.Kea;
 
-public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
-	where T : IKeaDhcpLeaseHandler
+public sealed class KeaDhcpLeaseWatcher : IHostedService
 {
 	private static readonly FileStreamOptions LeaseFileStreamOptions = new()
 	{
 		Access = FileAccess.Read,
 		Mode = FileMode.Open,
-		Options = FileOptions.SequentialScan,
+		Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
 		Share = (FileShare)7,
 	};
 
 	private readonly Decoder _decoder;
 	private readonly FileSystemWatcher _fsw;
-	private readonly T _handler;
+	private readonly IKeaDhcpLeaseHandler _handler;
 	private readonly string _leaseFile;
 	private readonly Pipe _pipe;
+	private readonly DhcpLeaseQueue _queue;
 	private Channel<FileSystemEventArgs>? _eventChannel;
 	private Task? _executeTask;
 	private CancellationTokenSource? _stoppingCts;
 
 	private KeaDhcpServerOptions Options { get; }
 
-	public KeaDhcpLeaseWatcher(KeaDhcpServerOptions options, T handler)
+	public KeaDhcpLeaseWatcher(KeaDhcpServerOptions options, IKeaDhcpLeaseHandler handler, DhcpLeaseQueue queue)
 	{
 		Options = options = options with { Leases = PathEx.ExpandPath(options.Leases) };
 		_handler = handler;
+		_queue = queue;
 
 		var leases = options.Leases.AsSpan();
 		if (leases.IsWhiteSpace())
@@ -177,7 +179,12 @@ public sealed class KeaDhcpLeaseWatcher<T> : IHostedService
 						return;
 					}
 
-					_handler.Handle(reader.Current);
+					if (_handler.Handle(reader.Current) is not { } lease)
+					{
+						continue;
+					}
+
+					await _queue.Write(lease, stoppingToken).ConfigureAwait(false);
 				}
 
 				var memory = writer.GetMemory();

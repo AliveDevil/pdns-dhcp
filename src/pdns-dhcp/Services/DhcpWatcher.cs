@@ -7,31 +7,23 @@ using pdns_dhcp.Options;
 
 namespace pdns_dhcp.Services;
 
-public class DhcpLeaseWatcher : IHostedService
+public class DhcpWatcher : IHostedService
 {
 	private readonly ImmutableArray<IHostedService> _services;
 
-	public DhcpLeaseWatcher(IOptions<DhcpOptions> options, IDhcpLeaseWatcherFactory factory)
+	public DhcpWatcher(IOptions<DhcpOptions> options, IDhcpWatcherFactory factory)
 	{
 		var dhcpOptions = options.Value;
 		var services = ImmutableArray.CreateBuilder<IHostedService>();
 		if (dhcpOptions.Kea is { } keaOptions)
 		{
-			if (keaOptions.Dhcp4 is { } dhcp4Options)
-			{
-				services.Add(factory.KeaDhcp4Watcher(dhcp4Options));
-			}
-
-			if (keaOptions.Dhcp6 is { } dhcp6Options)
-			{
-				services.Add(factory.KeaDhcp6Watcher(dhcp6Options));
-			}
+			services.Add(factory.KeaService(keaOptions));
 		}
 
 		_services = services.DrainToImmutable();
 	}
 
-	public Task StartAsync(CancellationToken cancellationToken)
+	public Task StartAsync(CancellationToken cancellationToken = default)
 	{
 		Task[] tasks = new Task[_services.Length];
 		for (int i = 0; i < tasks.Length; i++)
@@ -42,7 +34,7 @@ public class DhcpLeaseWatcher : IHostedService
 		return Task.WhenAll(tasks);
 	}
 
-	public async Task StopAsync(CancellationToken cancellationToken)
+	public async Task StopAsync(CancellationToken cancellationToken = default)
 	{
 		Task[] tasks = new Task[_services.Length];
 		for (int i = 0; i < tasks.Length; i++)
