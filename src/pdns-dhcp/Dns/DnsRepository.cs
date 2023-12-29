@@ -40,37 +40,23 @@ public class DnsRepository
 			cancellationToken, TaskCreationOptions.DenyChildAttach, TaskScheduler.Default);
 	}
 
-	public async ValueTask Record(DhcpLeaseChange leaseChange, CancellationToken cancellationToken = default)
+	public async ValueTask Record(DnsRecord record, CancellationToken cancellationToken = default)
 	{
 		// just lock that thing.
 		using (await _recordLock.AcquireLockAsync(cancellationToken).ConfigureAwait(false))
 		{
-			RecordContinuation(leaseChange);
+			RecordContinuation(record);
 		}
 
-		void RecordContinuation(DhcpLeaseChange leaseChange)
+		void RecordContinuation(DnsRecord record)
 		{
-			var search = Matches(leaseChange);
+			var search = Matches(record);
 			bool lockEntered = false;
 
 			try
 			{
 				lockEntered = _recordLock.TryEnterWriteLock(Timeout.Infinite);
-				DnsRecordIdentifier identifier = leaseChange.Identifier switch
-				{
-					DhcpLeaseClientIdentifier clientId => new DnsRecordClientIdentifier(clientId.ClientId),
-					DhcpLeaseHWAddrIdentifier hwAddr => new DnsRecordHWAddrIdentifier(hwAddr.HWAddr),
-					_ => throw new ArgumentException(nameof(leaseChange.Identifier))
-				};
 
-				TimeSpan lifetime = leaseChange.Lifetime.TotalSeconds switch
-				{
-					<= 1800 => TimeSpan.FromSeconds(Lifetimes[0]),
-					>= 10800 => TimeSpan.FromSeconds(Lifetimes[1]),
-					{ } seconds => TimeSpan.FromSeconds(seconds / 3)
-				};
-
-				var record = new DnsRecord(leaseChange.Address, leaseChange.FQDN, identifier, lifetime);
 				if (search.First is { } node)
 				{
 					search.RemoveFirst();
@@ -102,25 +88,29 @@ public class DnsRepository
 			}
 		}
 
-		LinkedList<int> Matches(DhcpLeaseChange query)
+		LinkedList<int> Matches(DnsRecord query)
 		{
 			LinkedList<int> list = [];
 
 			for (int i = 0; i < _records.Count; i++)
 			{
 				var record = _records[i];
-				if (record.RecordType != query.LeaseType)
+				if (record.RecordType != query.RecordType)
 				{
 					continue;
 				}
 
 				switch ((record.Identifier, query.Identifier))
 				{
-					case (DnsRecordClientIdentifier recordClientId, DhcpLeaseClientIdentifier queryClientId)
-						when StringComparer.InvariantCultureIgnoreCase.Equals(recordClientId.ClientId, queryClientId.ClientId):
+					case (
+						DnsRecordClientIdentifier { ClientId: { } recordClientId },
+						DnsRecordClientIdentifier { ClientId: { } queryClientId }
+						) when StringComparer.InvariantCultureIgnoreCase.Equals(recordClientId, queryClientId):
 
-					case (DnsRecordHWAddrIdentifier recordHWAddr, DhcpLeaseHWAddrIdentifier queryHWAddr)
-						when EqualityComparer<PhysicalAddress>.Default.Equals(recordHWAddr.HWAddr, queryHWAddr.HWAddr):
+					case (
+						DnsRecordHWAddrIdentifier { HWAddr: { } recordHWAddr },
+						DnsRecordHWAddrIdentifier { HWAddr: { } queryHWAddr }
+						) when EqualityComparer<PhysicalAddress>.Default.Equals(recordHWAddr, queryHWAddr):
 
 						list.AddLast(i);
 						continue;

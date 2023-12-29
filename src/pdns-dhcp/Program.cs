@@ -24,7 +24,7 @@ builder.Services.Configure<DhcpOptions>(builder.Configuration.GetRequiredSection
 builder.Services.Configure<PowerDnsOptions>(builder.Configuration.GetRequiredSection("PowerDns"));
 
 builder.Services.AddHostedService<DhcpWatcher>();
-builder.Services.AddHostedService<DnsQueueWorker>();
+builder.Services.AddHostedService<DhcpQueueWorker>();
 
 builder.Services.AddSingleton<DhcpLeaseQueue>();
 builder.Services.AddSingleton<DnsRepository>();
