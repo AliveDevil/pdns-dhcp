@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.Logging;
 using Microsoft.Toolkit.HighPerformance;
 using Microsoft.Toolkit.HighPerformance.Buffers;
 
@@ -11,10 +12,12 @@ namespace pdns_dhcp.PowerDns;
 
 public class PowerDnsHandler : ConnectionHandler
 {
+	private readonly ILogger<PowerDnsHandler> _logger;
 	private readonly DnsRepository _repository;
-	
-	public PowerDnsHandler(DnsRepository repository)
+
+	public PowerDnsHandler(DnsRepository repository, ILogger<PowerDnsHandler> logger)
 	{
+		_logger = logger;
 		_repository = repository;
 	}
 
@@ -100,20 +103,25 @@ public class PowerDnsHandler : ConnectionHandler
 	{
 		return method switch
 		{
-			InitializeMethod init => HandleInitializeMethod(init),
-			LookupMethod lookup => HandleLookupMethod(lookup),
+			InitializeMethod { Parameters: { } init } => HandleInitialize(init),
+			LookupMethod { Parameters: { } lookup } => HandleLookup(lookup),
 
 			_ => ValueTask.FromResult<Reply>(new BoolReply(false))
 		};
 	}
 
-	private ValueTask<Reply> HandleInitializeMethod(InitializeMethod method)
+	private ValueTask<Reply> HandleInitialize(InitializeMethodParameters method)
 	{
 		return ValueTask.FromResult(BoolReply.True);
 	}
 
-	private ValueTask<Reply> HandleLookupMethod(LookupMethod method)
+	private ValueTask<Reply> HandleLookup(LookupMethodParameters method)
 	{
-		return ValueTask.FromResult(BoolReply.False);
+		switch (method.Qtype.ToLowerInvariant())
+		{
+			default:
+				_logger.LogWarning("Unhandled QType {QType}", method.Qtype);
+				return ValueTask.FromResult(BoolReply.False);
+		}
 	}
 }
