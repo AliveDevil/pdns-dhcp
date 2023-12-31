@@ -8,8 +8,11 @@ public class KeaDhcp6LeaseHandler : IKeaDhcpLeaseHandler
 {
 	public DhcpLeaseChange? Handle(in SepReader.Row row)
 	{
-		KeaDhcp6Lease lease = KeaDhcp6Lease.Parse(row);
+		if (KeaDhcp6Lease.Parse(row) is not { } lease)
+		{
+			return null;
+		}
 
-		return default;
+		return new(lease.Address, lease.Hostname, null, default);
 	}
 }
