@@ -12,15 +12,19 @@ public class KeaService : IHostedService
 
 	public KeaService(KeaDhcpOptions options, IKeaFactory factory)
 	{
+		var services = ImmutableArray.CreateBuilder<IHostedService>();
+		
 		if (options.Dhcp4 is { } dhcp4Options)
 		{
-			_services.Add(factory.CreateWatcher(factory.CreateHandler4(), dhcp4Options));
+			services.Add(factory.CreateWatcher(factory.CreateHandler4(), dhcp4Options));
 		}
 
 		if (options.Dhcp6 is { } dhcp6Options)
 		{
-			_services.Add(factory.CreateWatcher(factory.CreateHandler6(), dhcp6Options));
+			services.Add(factory.CreateWatcher(factory.CreateHandler6(), dhcp6Options));
 		}
+
+		_services = services.DrainToImmutable();
 	}
 
 	public Task StartAsync(CancellationToken cancellationToken = default)
