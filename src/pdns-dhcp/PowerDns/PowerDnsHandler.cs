@@ -125,6 +125,16 @@ public class PowerDnsHandler : ConnectionHandler
 	{
 		switch (parameters.Qtype.ToUpperInvariant())
 		{
+			case "ANY":
+				return ValueTask.FromResult<Reply>(new LookupReply([]));
+
+			case "A":
+				return ValueTask.FromResult<Reply>(BoolReply.False);
+
+			case "AAAA":
+				_logger.LogInformation("AAAA request: {Options}", parameters);
+				return ValueTask.FromResult<Reply>(BoolReply.False);
+
 			default:
 				_logger.LogWarning("Unhandled QType {QType}", parameters.Qtype);
 				return ValueTask.FromResult<Reply>(BoolReply.False);
