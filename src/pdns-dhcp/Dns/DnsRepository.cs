@@ -14,6 +14,7 @@ public class DnsRepository
 
 	private readonly ReaderWriterLockSlim _recordLock = new();
 	private readonly List<DnsRecord> _records = [];
+	private readonly SemaphoreSlim _syncLock = new(1, 1);
 
 	public List<DnsRecord> Find(Predicate<DnsRecord> query)
 	{
@@ -40,20 +41,27 @@ public class DnsRepository
 
 	public async ValueTask Record(DnsRecord record, CancellationToken cancellationToken = default)
 	{
-		// just lock that thing.
-		using (await _recordLock.AcquireLockAsync(cancellationToken).ConfigureAwait(false))
+		bool entered = false;
+		try
 		{
+			entered = await _syncLock.WaitAsync(Timeout.Infinite, cancellationToken).ConfigureAwait(continueOnCapturedContext: false);
 			RecordContinuation(record);
+		}
+		finally
+		{
+			if (entered)
+			{
+				_syncLock.Release();
+			}
 		}
 
 		void RecordContinuation(DnsRecord record)
 		{
 			var search = Matches(record);
-			bool lockEntered = false;
-
+			bool entered = false;
 			try
 			{
-				lockEntered = _recordLock.TryEnterWriteLock(Timeout.Infinite);
+				entered = _recordLock.TryEnterWriteLock(Timeout.Infinite);
 
 				if (search.First is { } node)
 				{
@@ -79,7 +87,7 @@ public class DnsRepository
 			}
 			finally
 			{
-				if (lockEntered)
+				if (entered)
 				{
 					_recordLock.ExitWriteLock();
 				}
