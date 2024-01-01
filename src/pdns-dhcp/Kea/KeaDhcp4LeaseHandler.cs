@@ -13,6 +13,12 @@ public class KeaDhcp4LeaseHandler : IKeaDhcpLeaseHandler
 			return null;
 		}
 
-		return new(lease.Address, lease.Hostname, null, default);
+		DhcpLeaseIdentifier identifier = lease.ClientId switch
+		{
+			string clientId when !string.IsNullOrWhiteSpace(clientId) => new DhcpLeaseClientIdentifier(clientId),
+			_ => new DhcpLeaseHWAddrIdentifier(lease.HWAddr)
+		};
+
+		return new(lease.Address, lease.Hostname, identifier, lease.ValidLifetime);
 	}
 }

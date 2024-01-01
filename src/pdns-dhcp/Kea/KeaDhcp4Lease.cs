@@ -14,7 +14,7 @@ public record struct KeaDhcp4Lease(
 	IPAddress Address,
 	PhysicalAddress HWAddr,
 	string? ClientId,
-	uint ValidLifetime,
+	TimeSpan ValidLifetime,
 	DateTimeOffset Expire,
 	uint SubnetId,
 	bool FqdnFwd,
@@ -81,7 +81,7 @@ public record struct KeaDhcp4Lease(
 		static bool ToValidLifetime(ref Lease lease, in Cell span)
 		{
 			bool result = uint.TryParse(span, out var validLifetime);
-			lease.ValidLifetime = validLifetime;
+			lease.ValidLifetime = TimeSpan.FromSeconds(validLifetime);
 			return result;
 		}
 

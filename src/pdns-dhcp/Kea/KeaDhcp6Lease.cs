@@ -13,7 +13,7 @@ using Lease = KeaDhcp6Lease;
 public record struct KeaDhcp6Lease(
 	IPAddress Address,
 	string DUId,
-	uint ValidLifetime,
+	TimeSpan ValidLifetime,
 	DateTimeOffset Expire,
 	uint SubnetId,
 	uint PrefLifetime,
@@ -86,7 +86,7 @@ public record struct KeaDhcp6Lease(
 		static bool ToValidLifetime(ref Lease lease, in Cell span)
 		{
 			bool result = uint.TryParse(span, out var validLifetime);
-			lease.ValidLifetime = validLifetime;
+			lease.ValidLifetime = TimeSpan.FromSeconds(validLifetime);
 			return result;
 		}
 

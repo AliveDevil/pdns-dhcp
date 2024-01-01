@@ -19,6 +19,7 @@ internal partial class MethodContext : JsonSerializerContext;
 public abstract class Method<TParam>(TParam parameters) : Method
 	where TParam : MethodParameters
 {
+	[JsonPropertyName("parameters")]
 	public TParam Parameters => parameters;
 }
 
