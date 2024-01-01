@@ -7,22 +7,22 @@ namespace pdns_dhcp.PowerDns;
 public abstract class Reply;
 
 [JsonSerializable(typeof(Reply)), JsonSourceGenerationOptions(
-	GenerationMode = JsonSourceGenerationMode.Serialization,
-	PropertyNamingPolicy = JsonKnownNamingPolicy.KebabCaseLower,
+	GenerationMode = JsonSourceGenerationMode.Metadata,
 	WriteIndented = false
 )]
 internal partial class ReplyContext : JsonSerializerContext;
 
 public abstract class Reply<T>(T result) : Reply
 {
+	[JsonPropertyName("result")]
 	public T Result => result;
 }
 
 public class BoolReply(bool result) : Reply<bool>(result)
 {
-	public static Reply False { get; } = new BoolReply(false);
+	public static BoolReply False { get; } = new BoolReply(false);
 
-	public static Reply True { get; } = new BoolReply(true);
+	public static BoolReply True { get; } = new BoolReply(true);
 }
 
 public class LookupReply(QueryResult[] result) : Reply<QueryResult[]>(result);

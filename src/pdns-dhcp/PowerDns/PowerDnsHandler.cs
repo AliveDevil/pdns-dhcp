@@ -53,7 +53,7 @@ public class PowerDnsHandler : ConnectionHandler
 					catch (Exception e) { }
 
 					await JsonSerializer.SerializeAsync(writer, reply, ReplyContext.Default.Reply, connection.ConnectionClosed)
-						.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
+						.ConfigureAwait(continueOnCapturedContext: false);
 				}
 			}
 
@@ -106,22 +106,28 @@ public class PowerDnsHandler : ConnectionHandler
 			InitializeMethod { Parameters: { } init } => HandleInitialize(init),
 			LookupMethod { Parameters: { } lookup } => HandleLookup(lookup),
 
-			_ => ValueTask.FromResult<Reply>(new BoolReply(false))
+			_ => LogUnhandled(_logger, method)
 		};
+
+		static ValueTask<Reply> LogUnhandled(ILogger logger, Method method)
+		{
+			logger.LogWarning("Unhandled Method {Method}", method);
+			return ValueTask.FromResult<Reply>(BoolReply.False);
+		}
 	}
 
-	private ValueTask<Reply> HandleInitialize(InitializeMethodParameters method)
+	private ValueTask<Reply> HandleInitialize(InitializeParameters parameters)
 	{
-		return ValueTask.FromResult(BoolReply.True);
+		return ValueTask.FromResult<Reply>(BoolReply.True);
 	}
 
-	private ValueTask<Reply> HandleLookup(LookupMethodParameters method)
+	private ValueTask<Reply> HandleLookup(LookupParameters parameters)
 	{
-		switch (method.Qtype.ToLowerInvariant())
+		switch (parameters.Qtype.ToUpperInvariant())
 		{
 			default:
-				_logger.LogWarning("Unhandled QType {QType}", method.Qtype);
-				return ValueTask.FromResult(BoolReply.False);
+				_logger.LogWarning("Unhandled QType {QType}", parameters.Qtype);
+				return ValueTask.FromResult<Reply>(BoolReply.False);
 		}
 	}
 }

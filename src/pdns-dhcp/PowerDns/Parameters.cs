@@ -11,12 +11,12 @@ public record class MethodParameters : Parameters
 	public Dictionary<string, JsonElement> AdditionalProperties { get; set; } = [];
 }
 
-public record class InitializeMethodParameters(
+public record class InitializeParameters(
 	[property: JsonPropertyName("command")] string Command,
 	[property: JsonPropertyName("timeout")] int Timeout
 ) : MethodParameters;
 
-public record class LookupMethodParameters(
+public record class LookupParameters(
 	[property: JsonPropertyName("qtype")] string Qtype,
 	[property: JsonPropertyName("qname")] string Qname,
 	[property: JsonPropertyName("remote")] string Remote,

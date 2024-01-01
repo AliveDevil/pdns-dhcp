@@ -23,6 +23,6 @@ public abstract class Method<TParam>(TParam parameters) : Method
 	public TParam Parameters => parameters;
 }
 
-public class InitializeMethod(InitializeMethodParameters parameters) : Method<InitializeMethodParameters>(parameters), IMethod;
+public class InitializeMethod(InitializeParameters parameters) : Method<InitializeParameters>(parameters), IMethod;
 
-public class LookupMethod(LookupMethodParameters parameters) : Method<LookupMethodParameters>(parameters), IMethod;
+public class LookupMethod(LookupParameters parameters) : Method<LookupParameters>(parameters), IMethod;
