@@ -21,6 +21,11 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 		Options = FileOptions.SequentialScan | FileOptions.Asynchronous,
 		Share = (FileShare)7,
 	};
+	private static readonly SepReaderOptions MemfileReader = Sep.New(',').Reader(o => o with
+	{
+		DisableColCountCheck = true,
+		DisableFastFloat = true
+	});
 
 	private readonly Decoder _decoder;
 	private readonly FileSystemWatcher _fsw;
@@ -165,11 +170,7 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 				{
 					if (reader is null)
 					{
-						reader = Sep.New(',').Reader(o => o with
-						{
-							DisableColCountCheck = true,
-							Unescape = false
-						}).From(_pipe.Reader.AsStream());
+						reader = MemfileReader.From(_pipe.Reader.AsStream());
 						continue;
 					}
 
@@ -251,7 +252,6 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 
 		task.GetAwaiter().GetResult();
 	}
-
 
 	private void OnLeaseError(object sender, ErrorEventArgs e)
 	{
