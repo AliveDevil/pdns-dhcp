@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Net.Sockets;
 using System.Text.Json;
 
 using Microsoft.AspNetCore.Connections;
@@ -123,21 +124,64 @@ public class PowerDnsHandler : ConnectionHandler
 
 	private ValueTask<Reply> HandleLookup(LookupParameters parameters)
 	{
-		switch (parameters.Qtype.ToUpperInvariant())
+		AddressFamily? qtype = parameters.Qtype.ToUpperInvariant() switch
 		{
-			case "ANY":
-				return ValueTask.FromResult<Reply>(new LookupReply([]));
+			"ANY" => AddressFamily.Unknown,
+			"A" => AddressFamily.InterNetwork,
+			"AAAA" => AddressFamily.InterNetworkV6,
+			_ => default(AddressFamily?)
+		};
 
-			case "A":
-				return ValueTask.FromResult<Reply>(BoolReply.False);
+		if (qtype is null)
+		{
+			_logger.LogWarning("Unhandled QType {QType}", parameters.Qtype);
+			return ValueTask.FromResult<Reply>(BoolReply.False);
+		}
 
-			case "AAAA":
-				_logger.LogInformation("AAAA request: {Options}", parameters);
-				return ValueTask.FromResult<Reply>(BoolReply.False);
+		return FindByName(((AddressFamily)qtype, parameters.Qname.AsMemory()), _repository, _logger);
 
-			default:
-				_logger.LogWarning("Unhandled QType {QType}", parameters.Qtype);
-				return ValueTask.FromResult<Reply>(BoolReply.False);
+		static async ValueTask<Reply> FindByName((AddressFamily Family, ReadOnlyMemory<char> Qname) query, DnsRepository repository, ILogger logger)
+		{
+			QueryResult[]? records = null;
+
+			var qname = query.Qname.Trim().TrimEnd(".");
+			if (qname.Span.IsWhiteSpace())
+			{
+				goto exitEmpty;
+			}
+
+			var results = await repository.FindAsync(record =>
+			{
+				if ((record.RecordType & query.Family) != record.RecordType)
+				{
+					return false;
+				}
+
+				return qname.Span.Equals(record.FQDN, StringComparison.OrdinalIgnoreCase);
+			}).ConfigureAwait(false);
+
+			if (results.Count == 0)
+			{
+				goto exitEmpty;
+			}
+
+			records = new QueryResult[results.Count];
+			for (int i = 0; i < results.Count; i++)
+			{
+				DnsRecord record = results[i];
+#pragma warning disable CS8509 // RecordType is by convention InterNetwork or InterNetworkV6
+				records[i] = new(record.RecordType switch
+#pragma warning restore
+				{
+					AddressFamily.InterNetwork => "A",
+					AddressFamily.InterNetworkV6 => "AAAA"
+				}, record.FQDN, record.Address.ToString(), (int)record.Lifetime.TotalSeconds);
+			}
+
+		exitEmpty:
+			records ??= [];
+
+			return new LookupReply(records);
 		}
 	}
 }

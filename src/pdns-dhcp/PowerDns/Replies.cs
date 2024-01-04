@@ -8,6 +8,7 @@ public abstract class Reply;
 
 [JsonSerializable(typeof(Reply)), JsonSourceGenerationOptions(
 	GenerationMode = JsonSourceGenerationMode.Metadata,
+	DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
 	WriteIndented = false
 )]
 internal partial class ReplyContext : JsonSerializerContext;

@@ -2,8 +2,6 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-using DotNext.Threading;
-
 using Timeout = System.Threading.Timeout;
 
 namespace pdns_dhcp.Dns;

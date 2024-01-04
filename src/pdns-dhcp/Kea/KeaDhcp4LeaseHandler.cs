@@ -10,7 +10,12 @@ public class KeaDhcp4LeaseHandler : IKeaDhcpLeaseHandler
 	{
 		if (KeaDhcp4Lease.Parse(row) is not { } lease)
 		{
-			return null;
+			goto exitNull;
+		}
+
+		if (lease.State != 0)
+		{
+			goto exitNull;
 		}
 
 		DhcpLeaseIdentifier identifier = lease.ClientId switch
@@ -20,5 +25,8 @@ public class KeaDhcp4LeaseHandler : IKeaDhcpLeaseHandler
 		};
 
 		return new(lease.Address, lease.Hostname, identifier, lease.ValidLifetime);
+
+	exitNull:
+		return null;
 	}
 }
