@@ -3,6 +3,8 @@ using System.Text.Json.Serialization;
 
 namespace pdns_dhcp.PowerDns;
 
+[JsonDerivedType(typeof(InitializeParameters))]
+[JsonDerivedType(typeof(LookupParameters))]
 public record class Parameters;
 
 public record class MethodParameters : Parameters

@@ -42,7 +42,7 @@ public class PowerDnsHandler : ConnectionHandler
 				buffer.Write(memory.Span);
 				if (ConsumeJson(buffer, json, ref state))
 				{
-					var method = JsonSerializer.Deserialize(json.WrittenSpan, MethodContext.Default.Method)!;
+					var method = JsonSerializer.Deserialize(json.WrittenSpan, PowerDnsSerializerContext.Default.Method)!;
 					json.Clear();
 					state = default;
 
@@ -53,7 +53,7 @@ public class PowerDnsHandler : ConnectionHandler
 					}
 					catch (Exception e) { }
 
-					await JsonSerializer.SerializeAsync(writer, reply, ReplyContext.Default.Reply, connection.ConnectionClosed)
+					await JsonSerializer.SerializeAsync(writer, reply, PowerDnsSerializerContext.Default.Reply, connection.ConnectionClosed)
 						.ConfigureAwait(continueOnCapturedContext: false);
 				}
 			}

@@ -6,13 +6,6 @@ namespace pdns_dhcp.PowerDns;
 [JsonDerivedType(typeof(LookupReply))]
 public abstract class Reply;
 
-[JsonSerializable(typeof(Reply)), JsonSourceGenerationOptions(
-	GenerationMode = JsonSourceGenerationMode.Metadata,
-	DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-	WriteIndented = false
-)]
-internal partial class ReplyContext : JsonSerializerContext;
-
 public abstract class Reply<T>(T result) : Reply
 {
 	[JsonPropertyName("result")]

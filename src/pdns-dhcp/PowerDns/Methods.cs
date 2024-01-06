@@ -9,13 +9,6 @@ public interface IMethod;
 [JsonDerivedType(typeof(LookupMethod), "lookup")]
 public class Method;
 
-[JsonSerializable(typeof(Method)), JsonSourceGenerationOptions(
-	GenerationMode = JsonSourceGenerationMode.Metadata,
-	NumberHandling = JsonNumberHandling.AllowReadingFromString,
-	UseStringEnumConverter = true
-)]
-internal partial class MethodContext : JsonSerializerContext;
-
 public abstract class Method<TParam>(TParam parameters) : Method
 	where TParam : MethodParameters
 {
