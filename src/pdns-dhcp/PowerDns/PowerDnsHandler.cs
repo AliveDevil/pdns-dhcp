@@ -142,7 +142,7 @@ public class PowerDnsHandler : ConnectionHandler
 
 		static async ValueTask<Reply> FindByName((AddressFamily Family, ReadOnlyMemory<char> Qname) query, DnsRepository repository, ILogger logger)
 		{
-			QueryResult[]? records = null;
+			QueryResult[] records = [];
 
 			var qname = query.Qname.Trim().TrimEnd(".");
 			if (qname.Span.IsWhiteSpace())
@@ -179,8 +179,6 @@ public class PowerDnsHandler : ConnectionHandler
 			}
 
 		exitEmpty:
-			records ??= [];
-
 			return new LookupReply(records);
 		}
 	}
