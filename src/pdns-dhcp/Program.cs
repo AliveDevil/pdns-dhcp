@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Server.Kestrel.Transport.Sockets;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 using pdns_dhcp.Connections;
 using pdns_dhcp.Dhcp;
@@ -19,6 +20,7 @@ using pdns_dhcp.Services;
 using Stl.Interception;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddSystemd();
 
 builder.Services.Configure<DhcpOptions>(builder.Configuration.GetRequiredSection("Dhcp"));
 builder.Services.Configure<PowerDnsOptions>(builder.Configuration.GetRequiredSection("PowerDns"));
