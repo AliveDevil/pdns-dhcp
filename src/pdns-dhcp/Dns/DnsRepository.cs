@@ -2,6 +2,10 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
+using Microsoft.Extensions.Options;
+
+using pdns_dhcp.Options;
+
 using Timeout = System.Threading.Timeout;
 
 namespace pdns_dhcp.Dns;
@@ -10,9 +14,15 @@ public class DnsRepository
 {
 	private static ReadOnlySpan<int> Lifetimes => [600, 3600];
 
+	private readonly PowerDnsOptions _options;
 	private readonly ReaderWriterLockSlim _recordLock = new();
 	private readonly List<DnsRecord> _records = [];
 	private readonly SemaphoreSlim _syncLock = new(1, 1);
+
+	public DnsRepository(IOptions<PowerDnsOptions> options)
+	{
+		_options = options.Value;
+	}
 
 	public List<DnsRecord> Find(Predicate<DnsRecord> query)
 	{
@@ -124,11 +134,10 @@ public class DnsRepository
 				{
 					list.AddLast(i);
 				}
-				// Opt-In to disallow duplicate FQDN?
-				//else if (StringComparer.InvariantCultureIgnoreCase.Equals(record.FQDN, query.FQDN))
-				//{
-				//	list.AddLast(i);
-				//}
+				else if (_options.UniqueHostnames && StringComparer.OrdinalIgnoreCase.Equals(record.FQDN, query.FQDN))
+				{
+					list.AddLast(i);
+				}
 			}
 
 			return list;
