@@ -1,11 +1,13 @@
 using System.Buffers;
+using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text.Json;
 
+using CommunityToolkit.HighPerformance;
+using CommunityToolkit.HighPerformance.Buffers;
+
 using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Logging;
-using Microsoft.Toolkit.HighPerformance;
-using Microsoft.Toolkit.HighPerformance.Buffers;
 
 using pdns_dhcp.Dns;
 
@@ -31,8 +33,7 @@ public class PowerDnsHandler : ConnectionHandler
 		using var writer = connection.Transport.Output.AsStream();
 		while (!connection.ConnectionClosed.IsCancellationRequested)
 		{
-			var read = await input.ReadAsync(connection.ConnectionClosed).ConfigureAwait(false);
-			if (read.IsCanceled)
+			if (await ReadAsync(input, connection.ConnectionClosed) is not { IsCanceled: false } read)
 			{
 				return;
 			}
@@ -59,6 +60,18 @@ public class PowerDnsHandler : ConnectionHandler
 			}
 
 			input.AdvanceTo(read.Buffer.End);
+		}
+
+		static async ValueTask<ReadResult?> ReadAsync(PipeReader reader, CancellationToken cancellationToken)
+		{
+			try
+			{
+				return await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+			}
+			catch (OperationCanceledException)
+			{
+				return null;
+			}
 		}
 
 		static bool ConsumeJson(ArrayPoolBufferWriter<byte> inflight, ArrayPoolBufferWriter<byte> json, ref JsonReaderState state)

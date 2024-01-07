@@ -17,8 +17,6 @@ using pdns_dhcp.Options;
 using pdns_dhcp.PowerDns;
 using pdns_dhcp.Services;
 
-using Stl.Interception;
-
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSystemd();
 
@@ -31,8 +29,8 @@ builder.Services.AddHostedService<DhcpQueueWorker>();
 builder.Services.AddSingleton<DhcpLeaseQueue>();
 builder.Services.AddSingleton<DnsRepository>();
 
-builder.Services.AddTypedFactory<IDhcpWatcherFactory>();
-builder.Services.AddTypedFactory<IKeaFactory>();
+builder.Services.AddDhcpWatcherFactory();
+builder.Services.AddKeaFactory();
 
 builder.Services.Configure<SocketTransportOptions>(options =>
 {

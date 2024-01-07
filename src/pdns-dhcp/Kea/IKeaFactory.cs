@@ -1,10 +1,8 @@
 using pdns_dhcp.Options;
 
-using Stl.Interception;
-
 namespace pdns_dhcp.Kea;
 
-public interface IKeaFactory : IRequiresFullProxy
+public interface IKeaFactory
 {
 	KeaDhcp4LeaseHandler CreateHandler4();
 

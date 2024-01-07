@@ -14,7 +14,7 @@
 
 using System.Buffers;
 
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 
 namespace System.IO;
 

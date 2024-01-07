@@ -3,7 +3,7 @@ using System.Globalization;
 
 using DotNext.Buffers;
 
-using Microsoft.Toolkit.HighPerformance.Buffers;
+using CommunityToolkit.HighPerformance.Buffers;
 
 namespace pdns_dhcp.Kea;
 
