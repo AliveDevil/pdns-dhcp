@@ -1,0 +1,11 @@
+[Unit]
+Description=PowerDNS/DHCP Companion Remote
+Before=pdns.service
+
+[Service]
+Type=notify
+ExecStart=/opt/pdns-dhcp/pdns-dhcp
+WorkingDirectory=/etc/pdns-dhcp
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+# WARNING
+# This currently not supported.
+
+[Unit]
+Description=pdns-dhcp PowerDNS Remote Socket
+
+[Socket]
+ListenStream=/run/pdns-dhcp/pdns-dhcp.sock
+Accept=no
+
+[Install]
+WantedBy=sockets.target
