@@ -79,6 +79,7 @@ public class PowerDnsHandler : ConnectionHandler
 					var root = jsonDocument.RootElement;
 					if (!root.TryGetProperty("method", out var methodElement))
 					{
+						_logger.LogWarning("Json Document missing required property method: {document}", jsonDocument);
 						continue;
 					}
 
@@ -190,6 +191,11 @@ public class PowerDnsHandler : ConnectionHandler
 
 	private ValueTask<Reply> HandleInitialize(InitializeParameters parameters)
 	{
+		if (_logger.IsEnabled(LogLevel.Information))
+		{
+			_logger.LogInformation("Handling Initialize {parameters}", parameters);
+		}
+
 		return ValueTask.FromResult<Reply>(BoolReply.True);
 	}
 
@@ -207,6 +213,11 @@ public class PowerDnsHandler : ConnectionHandler
 		{
 			_logger.LogWarning("Unhandled QType {QType}", parameters.Qtype);
 			return ValueTask.FromResult<Reply>(BoolReply.False);
+		}
+
+		if (_logger.IsEnabled(LogLevel.Information))
+		{
+			_logger.LogInformation("Searching for {key} in {family}", parameters.Qname, parameters.Qtype);
 		}
 
 		return FindByName(((AddressFamily)qtype, parameters.Qname.AsMemory()), _repository, _logger);
