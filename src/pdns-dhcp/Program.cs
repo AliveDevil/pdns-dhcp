@@ -60,26 +60,23 @@ builder.Services.Configure<SocketTransportOptions>(options =>
 
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
-	if (context.Configuration.GetSection("PowerDns:Listener").Get<PowerDnsListenerOptions>() is { } pdnsOptions)
+	bool isSystemd = false;
+	options.UseSystemd(options =>
+	{
+		isSystemd = true;
+		options.UseConnectionHandler<PowerDnsHandler>();
+	});
+	
+	if (!isSystemd && context.Configuration.GetRequiredSection("PowerDns:Listener").Get<PowerDnsListenerOptions>() is { } pdnsOptions)
 	{
 		var path = PathEx.ExpandPath(pdnsOptions.Socket);
 		FileInfo file = new(path);
 		file.Directory!.Create();
-		bool isSystemd = false;
-		options.UseSystemd(options =>
+		file.Delete();
+		options.ListenUnixSocket(path, options =>
 		{
-			isSystemd = true;
 			options.UseConnectionHandler<PowerDnsHandler>();
 		});
-
-		if (!isSystemd)
-		{
-			file.Delete();
-			options.ListenUnixSocket(path, options =>
-			{
-				options.UseConnectionHandler<PowerDnsHandler>();
-			});
-		}
 	}
 });
 
