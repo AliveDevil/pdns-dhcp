@@ -65,10 +65,21 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 		var path = PathEx.ExpandPath(pdnsOptions.Socket);
 		FileInfo file = new(path);
 		file.Directory!.Create();
-		options.ListenUnixSocket(path, options =>
+		bool isSystemd = false;
+		options.UseSystemd(options =>
 		{
+			isSystemd = true;
 			options.UseConnectionHandler<PowerDnsHandler>();
 		});
+
+		if (!isSystemd)
+		{
+			file.Delete();
+			options.ListenUnixSocket(path, options =>
+			{
+				options.UseConnectionHandler<PowerDnsHandler>();
+			});
+		}
 	}
 });
 
