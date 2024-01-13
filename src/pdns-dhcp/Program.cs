@@ -65,7 +65,6 @@ builder.WebHost.ConfigureKestrel((context, options) =>
 		var path = PathEx.ExpandPath(pdnsOptions.Socket);
 		FileInfo file = new(path);
 		file.Directory!.Create();
-		file.Delete();
 		options.ListenUnixSocket(path, options =>
 		{
 			options.UseConnectionHandler<PowerDnsHandler>();

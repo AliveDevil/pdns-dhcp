@@ -144,69 +144,72 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 				_eventChannel.Writer.TryComplete();
 				if (reader is { IsCompleted: false })
 				{
-					try
-					{
-						await reader.ConfigureAwait(continueOnCapturedContext: false);
-					}
-					catch { }
+					await reader.ConfigureAwait(ConfigureAwaitOptions.SuppressThrowing);
 				}
+
+				_pipe.Reset();
 			}
 		}
 	}
 
 	private async Task FileReader(AutoResetEvent waitHandle, CancellationToken stoppingToken)
 	{
-		PipeWriter writer = _pipe.Writer;
 		SepReader? reader = null;
 		try
 		{
-			using var file = new FileStream(Options.Leases, LeaseFileStreamOptions);
-
-			bool awaitLineFeed = false;
-			int newLinesEncountered = 0;
-			while (!stoppingToken.IsCancellationRequested)
+			PipeWriter writer = _pipe.Writer;
+			using (stoppingToken.Register(s => ((PipeWriter)s!).Complete(null), writer))
 			{
-				for (; newLinesEncountered > 0; newLinesEncountered--)
+				using var file = new FileStream(Options.Leases, LeaseFileStreamOptions);
+
+				bool awaitLineFeed = false;
+				int newLinesEncountered = 0;
+				while (!stoppingToken.IsCancellationRequested)
 				{
-					if (reader is null)
+					for (; newLinesEncountered > 0; newLinesEncountered--)
 					{
-						reader = MemfileReader.From(_pipe.Reader.AsStream());
-						continue;
+						if (reader is null)
+						{
+							reader = await Task.Factory.StartNew(
+								s => MemfileReader.From((Stream)s!),
+								_pipe.Reader.AsStream(),
+								stoppingToken,
+								TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
+							continue;
+						}
+
+						if (!reader.MoveNext())
+						{
+							// TODO Error state.
+							return;
+						}
+
+						if (_handler.Handle(reader.Current) is not { } lease)
+						{
+							continue;
+						}
+
+						await _queue.Write(lease, stoppingToken).ConfigureAwait(false);
 					}
 
-					if (!reader.MoveNext())
+					var memory = writer.GetMemory();
+					int read = await file.ReadAsync(memory, stoppingToken);
+					if (read > 0)
 					{
-						// TODO Error state.
-						return;
+						CountNewLines(_decoder, memory[..read], ref newLinesEncountered, ref awaitLineFeed);
+						writer.Advance(read);
+						await writer.FlushAsync(stoppingToken);
 					}
-
-					if (_handler.Handle(reader.Current) is not { } lease)
+					else
 					{
-						continue;
+						await waitHandle.WaitOneAsync(stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
 					}
-
-					await _queue.Write(lease, stoppingToken).ConfigureAwait(false);
-				}
-
-				var memory = writer.GetMemory();
-				int read = await file.ReadAsync(memory, stoppingToken);
-				if (read > 0)
-				{
-					CountNewLines(_decoder, memory[..read], ref newLinesEncountered, ref awaitLineFeed);
-					writer.Advance(read);
-					await writer.FlushAsync(stoppingToken);
-				}
-				else
-				{
-					await waitHandle.WaitOneAsync(stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
 				}
 			}
 		}
 		finally
 		{
 			reader?.Dispose();
-			writer.Complete();
-			_pipe.Reset();
 		}
 
 		static void CountNewLines(Decoder decoder, in Memory<byte> memory, ref int newLinesEncountered, ref bool awaitLineFeed)
