@@ -3,7 +3,6 @@ using System.Text.Json.Serialization;
 namespace pdns_dhcp.PowerDns;
 
 [JsonSerializable(typeof(Reply))]
-[JsonSerializable(typeof(Method))]
 [JsonSerializable(typeof(Parameters))]
 [JsonSourceGenerationOptions(
 	DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,

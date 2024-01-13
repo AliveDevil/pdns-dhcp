@@ -1,21 +1,12 @@
-using System.Text.Json.Serialization;
-
 namespace pdns_dhcp.PowerDns;
 
 public interface IMethod;
 
-[JsonPolymorphic(TypeDiscriminatorPropertyName = "method")]
-[JsonDerivedType(typeof(InitializeMethod), "initialize")]
-[JsonDerivedType(typeof(LookupMethod), "lookup")]
-public class Method;
+public record MethodBase(string Method);
 
-public abstract class Method<TParam>(TParam parameters) : Method
-	where TParam : MethodParameters
-{
-	[JsonPropertyName("parameters")]
-	public TParam Parameters => parameters;
-}
+public abstract record Method<TParam>(string Method, TParam Parameters) : MethodBase(Method)
+	where TParam : MethodParameters;
 
-public class InitializeMethod(InitializeParameters parameters) : Method<InitializeParameters>(parameters), IMethod;
+public record InitializeMethod(InitializeParameters Parameters) : Method<InitializeParameters>("initialize", Parameters), IMethod;
 
-public class LookupMethod(LookupParameters parameters) : Method<LookupParameters>(parameters), IMethod;
+public record LookupMethod(LookupParameters Parameters) : Method<LookupParameters>("lookup", Parameters), IMethod;

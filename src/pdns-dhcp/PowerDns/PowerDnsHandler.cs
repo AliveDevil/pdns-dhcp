@@ -1,4 +1,5 @@
 using System.Buffers;
+using System.Collections.ObjectModel;
 using System.IO.Pipelines;
 using System.Net.Sockets;
 using System.Text.Json;
@@ -15,8 +16,33 @@ namespace pdns_dhcp.PowerDns;
 
 public class PowerDnsHandler : ConnectionHandler
 {
+	delegate MethodBase? HandlerConverter(in JsonElement element);
+
+	private static readonly ReadOnlyDictionary<string, HandlerConverter> Converters;
+
 	private readonly ILogger<PowerDnsHandler> _logger;
 	private readonly DnsRepository _repository;
+
+	static PowerDnsHandler()
+	{
+		Dictionary<string, HandlerConverter> converters = new(StringComparer.OrdinalIgnoreCase)
+		{
+			["initialize"] = ToInitialize,
+			["lookup"] = ToLookup
+		};
+
+		Converters = converters.AsReadOnly();
+
+		static InitializeMethod ToInitialize(in JsonElement element)
+		{
+			return new(element.Deserialize(PowerDnsSerializerContext.Default.InitializeParameters)!);
+		}
+
+		static LookupMethod ToLookup(in JsonElement element)
+		{
+			return new(element.Deserialize(PowerDnsSerializerContext.Default.LookupParameters)!);
+		}
+	}
 
 	public PowerDnsHandler(DnsRepository repository, ILogger<PowerDnsHandler> logger)
 	{
@@ -41,22 +67,43 @@ public class PowerDnsHandler : ConnectionHandler
 			foreach (var memory in read.Buffer)
 			{
 				buffer.Write(memory.Span);
-				if (ConsumeJson(buffer, json, ref state))
+				if (!ConsumeJson(buffer, json, ref state))
 				{
-					var method = JsonSerializer.Deserialize(json.WrittenSpan, PowerDnsSerializerContext.Default.Method)!;
+					continue;
+				}
+
+				MethodBase method;
+				try
+				{
+					using var jsonDocument = JsonDocument.Parse(json.WrittenMemory);
+					var root = jsonDocument.RootElement;
+					if (!root.TryGetProperty("method", out var methodElement))
+					{
+						continue;
+					}
+
+					if (Parse(methodElement, root.GetProperty("parameters")) is not { } methodLocal)
+					{
+						continue;
+					}
+
+					method = methodLocal;
+				}
+				finally
+				{
 					json.Clear();
 					state = default;
-
-					Reply reply = BoolReply.False;
-					try
-					{
-						reply = await Handle(method, connection.ConnectionClosed).ConfigureAwait(false);
-					}
-					catch (Exception e) { }
-
-					await JsonSerializer.SerializeAsync(writer, reply, PowerDnsSerializerContext.Default.Reply, connection.ConnectionClosed)
-						.ConfigureAwait(continueOnCapturedContext: false);
 				}
+
+				Reply reply = BoolReply.False;
+				try
+				{
+					reply = await Handle(method, connection.ConnectionClosed).ConfigureAwait(false);
+				}
+				catch (Exception e) { }
+
+				await JsonSerializer.SerializeAsync(writer, reply, PowerDnsSerializerContext.Default.Reply, connection.ConnectionClosed)
+					.ConfigureAwait(continueOnCapturedContext: false);
 			}
 
 			input.AdvanceTo(read.Buffer.End);
@@ -111,9 +158,20 @@ public class PowerDnsHandler : ConnectionHandler
 
 			return final;
 		}
+
+		static MethodBase? Parse(in JsonElement element, in JsonElement parameters)
+		{
+			HandlerConverter? converter = default;
+			return element.GetString() switch
+			{
+				null => null,
+				{ } methodName when !Converters.TryGetValue(methodName, out converter) => new MethodBase(methodName),
+				_ => converter(parameters)
+			};
+		}
 	}
 
-	private ValueTask<Reply> Handle(Method method, CancellationToken cancellationToken = default)
+	private ValueTask<Reply> Handle(MethodBase method, CancellationToken cancellationToken = default)
 	{
 		return method switch
 		{
@@ -123,7 +181,7 @@ public class PowerDnsHandler : ConnectionHandler
 			_ => LogUnhandled(_logger, method)
 		};
 
-		static ValueTask<Reply> LogUnhandled(ILogger logger, Method method)
+		static ValueTask<Reply> LogUnhandled(ILogger logger, MethodBase method)
 		{
 			logger.LogWarning("Unhandled Method {Method}", method);
 			return ValueTask.FromResult<Reply>(BoolReply.False);
