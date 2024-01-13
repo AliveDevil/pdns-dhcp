@@ -170,11 +170,15 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 					{
 						if (reader is null)
 						{
+							// LongRunning, force spawning a thread
+							// As this may block for a long time.
 							reader = await Task.Factory.StartNew(
 								s => MemfileReader.From((Stream)s!),
 								_pipe.Reader.AsStream(),
 								stoppingToken,
-								TaskCreationOptions.AttachedToParent, TaskScheduler.Default);
+								TaskCreationOptions.DenyChildAttach | TaskCreationOptions.LongRunning,
+								TaskScheduler.Default)
+								.ConfigureAwait(false);
 							continue;
 						}
 

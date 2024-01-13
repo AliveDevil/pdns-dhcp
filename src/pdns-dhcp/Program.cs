@@ -60,7 +60,7 @@ builder.Services.Configure<SocketTransportOptions>(options =>
 
 builder.WebHost.ConfigureKestrel((context, options) =>
 {
-	if (context.Configuration.GetRequiredSection("PowerDns:Listener").Get<PowerDnsListenerOptions>() is { } pdnsOptions)
+	if (context.Configuration.GetSection("PowerDns:Listener").Get<PowerDnsListenerOptions>() is { } pdnsOptions)
 	{
 		var path = PathEx.ExpandPath(pdnsOptions.Socket);
 		FileInfo file = new(path);
