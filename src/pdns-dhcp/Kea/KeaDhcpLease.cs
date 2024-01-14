@@ -43,7 +43,7 @@ public static class KeaDhcpLease
 
 				if (converted)
 				{
-					writer.Write(escapedChar);
+					writer.Write([escapedChar]);
 				}
 				else
 				{
