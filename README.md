@@ -66,7 +66,7 @@ Incorporates following libraries directly:
 
 **.NET Foundation and Contributors**
 - [CommunityToolkit.HighPerformance](https://github.com/CommunityToolkit/dotnet) - MIT
-- [dotNext.Threading](https://github.com/dotnet/dotNext) - MIT
+- [dotNext](https://github.com/dotnet/dotNext) - MIT
 - Several runtime libraries, as part of [.NET](https://github.com/dotnet/runtime)
   - Microsoft.AspNetCore.App
   - Microsoft.Extensions.Configuration.Binder
