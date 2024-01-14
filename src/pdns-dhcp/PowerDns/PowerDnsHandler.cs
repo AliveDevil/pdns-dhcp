@@ -72,39 +72,44 @@ public class PowerDnsHandler : ConnectionHandler
 					continue;
 				}
 
-				MethodBase method;
-				try
-				{
-					using var jsonDocument = JsonDocument.Parse(json.WrittenMemory);
-					var root = jsonDocument.RootElement;
-					if (!root.TryGetProperty("method", out var methodElement))
-					{
-						_logger.LogWarning("Json Document missing required property method: {document}", jsonDocument);
-						continue;
-					}
-
-					if (Parse(methodElement, root.GetProperty("parameters")) is not { } methodLocal)
-					{
-						continue;
-					}
-
-					method = methodLocal;
-				}
-				finally
-				{
-					json.Clear();
-					state = default;
-				}
-
 				Reply reply = BoolReply.False;
 				try
 				{
+					MethodBase method;
+					try
+					{
+						using var jsonDocument = JsonDocument.Parse(json.WrittenMemory);
+						var root = jsonDocument.RootElement;
+						if (!root.TryGetProperty("method", out var methodElement))
+						{
+							_logger.LogWarning("Json Document missing required property method: {document}", jsonDocument);
+							continue;
+						}
+
+						if (Parse(methodElement, root.GetProperty("parameters")) is not { } methodLocal)
+						{
+							continue;
+						}
+
+						method = methodLocal;
+					}
+					finally
+					{
+						json.Clear();
+						state = default;
+					}
+
 					reply = await Handle(method, connection.ConnectionClosed).ConfigureAwait(false);
 				}
-				catch (Exception e) { }
-
-				await JsonSerializer.SerializeAsync(writer, reply, PowerDnsSerializerContext.Default.Reply, connection.ConnectionClosed)
-					.ConfigureAwait(continueOnCapturedContext: false);
+				catch (Exception e)
+				{
+					_logger.LogError(e, "Error");
+				}
+				finally
+				{
+					await JsonSerializer.SerializeAsync(writer, reply, PowerDnsSerializerContext.Default.Reply, connection.ConnectionClosed)
+						.ConfigureAwait(false);
+				}
 			}
 
 			input.AdvanceTo(read.Buffer.End);
@@ -166,7 +171,7 @@ public class PowerDnsHandler : ConnectionHandler
 			return element.GetString() switch
 			{
 				null => null,
-				{ } methodName when !Converters.TryGetValue(methodName, out converter) => new MethodBase(methodName),
+				{ } methodName when !Converters.TryGetValue(methodName, out converter) => new Method<MethodParameters>(methodName, parameters.Deserialize(PowerDnsSerializerContext.Default.MethodParameters)!),
 				_ => converter(parameters)
 			};
 		}
@@ -184,7 +189,7 @@ public class PowerDnsHandler : ConnectionHandler
 
 		static ValueTask<Reply> LogUnhandled(ILogger logger, MethodBase method)
 		{
-			logger.LogWarning("Unhandled Method {Method}", method);
+			logger.LogWarning("Unhandled {Method}", method);
 			return ValueTask.FromResult<Reply>(BoolReply.False);
 		}
 	}
@@ -193,7 +198,7 @@ public class PowerDnsHandler : ConnectionHandler
 	{
 		if (_logger.IsEnabled(LogLevel.Information))
 		{
-			_logger.LogInformation("Handling Initialize {parameters}", parameters);
+			_logger.LogInformation("Handling {parameters}", parameters);
 		}
 
 		return ValueTask.FromResult<Reply>(BoolReply.True);
@@ -217,7 +222,7 @@ public class PowerDnsHandler : ConnectionHandler
 
 		if (_logger.IsEnabled(LogLevel.Information))
 		{
-			_logger.LogInformation("Searching for {key} in {family}", parameters.Qname, parameters.Qtype);
+			_logger.LogInformation("Lookup {key} in {family}", parameters.Qname, parameters.Qtype);
 		}
 
 		return FindByName(((AddressFamily)qtype, parameters.Qname.AsMemory()), _repository, _logger);

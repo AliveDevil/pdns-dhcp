@@ -49,6 +49,6 @@ public class KeaService : IHostedService
 		var waitTask = Task.WhenAll(tasks);
 		TaskCompletionSource taskCompletionSource = new();
 		using var registration = cancellationToken.Register(s => ((TaskCompletionSource)s!).SetCanceled(), taskCompletionSource);
-		await Task.WhenAny(waitTask, taskCompletionSource.Task).ConfigureAwait(continueOnCapturedContext: false);
+		await Task.WhenAny(waitTask, taskCompletionSource.Task).ConfigureAwait(false);
 	}
 }

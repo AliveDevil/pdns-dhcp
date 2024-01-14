@@ -206,7 +206,7 @@ public sealed class KeaDhcpLeaseWatcher : IHostedService
 					}
 					else
 					{
-						await waitHandle.WaitOneAsync(stoppingToken).ConfigureAwait(continueOnCapturedContext: false);
+						await waitHandle.WaitOneAsync(stoppingToken).ConfigureAwait(false);
 					}
 				}
 			}
